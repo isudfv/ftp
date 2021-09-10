@@ -12,9 +12,12 @@
 #include <cstring>
 #include <regex>
 #include <unistd.h>
+#include <filesystem>
 
 const int MAXTEXT = 4096;
 const int LISTENQ = 8;
+//std::string cmdline;
+
 
 const std::regex space_regex("[^\\s \"]+|\"([^\"]*)\"");
 
@@ -56,11 +59,11 @@ public:
     }
 
     int recv(char *buf, size_t _n = MAXTEXT) {
-        return ::recv(sockfd, buf, MAXTEXT, 0);
+        return ::recv(sockfd, buf, _n, 0);
     }
 
-    int send(char *buf, size_t _n = MAXTEXT) {
-        return ::send(sockfd, buf, MAXTEXT, 0);
+    int send(const char *buf, size_t _n = MAXTEXT) {
+        return ::send(sockfd, buf, _n, 0);
     }
 
 public:
@@ -79,6 +82,20 @@ std::vector<std::string> split(const std::string &s) {
                  cmds.push_back(match[p - 1]);
              });
     return cmds;
+}
+
+void show_process_bar(double progress) {
+    static int barWidth = 70;
+
+    std::cout << "[";
+    int pos = barWidth * progress;
+    for (int i = 0; i < barWidth; ++i) {
+        if (i < pos) std::cout << "=";
+        else if (i == pos) std::cout << ">";
+        else std::cout << " ";
+    }
+    std::cout << "] " << int(progress * 100.0) << " %\r";
+    std::cout.flush();
 }
 
 #endif //FTP_MYSOCK_H
