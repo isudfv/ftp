@@ -14,6 +14,16 @@
 #include <unistd.h>
 #include <filesystem>
 
+#if defined(_WIN32)
+#define WIN32_LEAN_AND_MEAN
+#define VC_EXTRALEAN
+#include <Windows.h>
+#elif defined(__linux__)
+
+#include <sys/ioctl.h>
+
+#endif // Windows/Linux
+
 const int MAXTEXT = 4096;
 const int LISTENQ = 8;
 //std::string cmdline;
@@ -58,11 +68,13 @@ public:
         ::close(sockfd);
     }
 
-    int recv(char *buf, size_t _n = MAXTEXT) {
+    int recv(void *buf, size_t _n = MAXTEXT) {
+//        std::cout << buf << std::endl;
         return ::recv(sockfd, buf, _n, 0);
     }
 
-    int send(const char *buf, size_t _n = MAXTEXT) {
+    int send(const void *buf, size_t _n = MAXTEXT) {
+//        std::cout << buf << std::endl;
         return ::send(sockfd, buf, _n, 0);
     }
 
@@ -96,6 +108,31 @@ void show_process_bar(double progress) {
     }
     std::cout << "] " << int(progress * 100.0) << " %\r";
     std::cout.flush();
+}
+
+void get_terminal_size(int &width, int &height) {
+#if defined(_WIN32)
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
+    width = (int)(csbi.srWindow.Right-csbi.srWindow.Left+1);
+    height = (int)(csbi.srWindow.Bottom-csbi.srWindow.Top+1);
+#elif defined(__linux__)
+    struct winsize w;
+    ioctl(fileno(stdout), TIOCGWINSZ, &w);
+    width = (int) (w.ws_col);
+    height = (int) (w.ws_row);
+#endif // Windows/Linux
+}
+
+template<typename InputIterator1, typename InputIterator2>
+bool range_equal(InputIterator1 first1, InputIterator1 last1,
+                 InputIterator2 first2, InputIterator2 last2) {
+    while (first1 != last1 && first2 != last2) {
+        if (*first1 != *first2) return false;
+        ++first1;
+        ++first2;
+    }
+    return (first1 == last1) && (first2 == last2);
 }
 
 #endif //FTP_MYSOCK_H

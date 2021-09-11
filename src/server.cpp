@@ -63,13 +63,11 @@ int main(int args, char **argv) {
                     in.seekg(0, ios::end);
                     chunk = in.tellg() / MAXTEXT;
                     rest  = in.tellg() % MAXTEXT;
-                    cout << in.tellg() << endl
-                         << chunk << endl
-                         << rest << endl;
                     in.seekg(0, ios::beg);
 
-                    connfd.send((char *)&chunk, sizeof(size_t));
-                    connfd.send((char *)&rest, sizeof(size_t));
+                    connfd.send(&chunk, sizeof(size_t));
+                    connfd.send(&rest, sizeof(size_t));
+                    perror("Error: ");
 
                     for (size_t i = 0; i < chunk; ++i) {
                         in.read(buf, MAXTEXT);

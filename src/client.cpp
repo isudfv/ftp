@@ -51,31 +51,47 @@ int main(int args, char **argv) {
             fstream out(cmds[2], ios::out | ios::binary);
 
             size_t chunk, rest;
-            connfd.recv((char *)&chunk, sizeof(size_t));
-            connfd.recv((char *)&rest, sizeof(size_t));
-
-            cout << chunk << endl
-                 << rest << endl;
+            connfd.recv(&chunk, sizeof(size_t));
+            connfd.recv(&rest, sizeof(size_t));
+            perror("Error: ");
 
             auto startTime = chrono::high_resolution_clock::now();
 
             for (size_t i = 0; i < chunk; ++i) {
                 connfd.recv(buf, MAXTEXT);
                 out.write(buf, MAXTEXT);
-                show_process_bar((double)(i+1)/(double)chunk);
+//                show_process_bar((double)(i+1)/(double)chunk);
             }
-            cout << endl;
             connfd.recv(buf, rest);
             out.write(buf, rest);
 
             auto endTime = chrono::high_resolution_clock::now();
-
-
+            auto totalTime = chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count();
 
             out.close();
+
+            /*{
+                std::ifstream file1(cmds[1]);
+                std::ifstream file2(cmds[2]);
+
+                std::istreambuf_iterator<char> begin1(file1);
+                std::istreambuf_iterator<char> begin2(file2);
+
+                std::istreambuf_iterator<char> end;
+
+                if (range_equal(begin1, end, begin2, end)){
+                    cout << "equal\n";
+                } else {
+                    cout << "not equal\n";
+                }
+            }*/
+
+
             cout << "File download done, Total time: "
-                 << chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count()
-                 << "s" << endl;
+                 << totalTime
+                 << "ms, Average speed: "
+                 << chunk * MAXTEXT / 1024 / 1024 * 1000 / totalTime
+                 << " MiB/s" << endl;
         }
         cout << "ftp>" ;
     }
