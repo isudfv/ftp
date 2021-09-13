@@ -58,6 +58,11 @@ int main(int args, char **argv) {
                 if (cmds[0] == "get") {
                     fstream in(cmds[1], ios::in | ios::binary);
 
+                    if (!in.is_open()) {
+                        cerr << "Error open file:" << cmds[1] << endl;
+                        exit(1);
+                    }
+
 
                     mysock _listenfd(htonl(INADDR_ANY), htons(4399));
                     _listenfd.start();

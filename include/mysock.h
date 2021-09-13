@@ -15,6 +15,7 @@
 #define VC_EXTRALEAN
 #include <Windows.h>
 #include "WinSock2.h"
+#pragma comment(lib, "Ws2_32.lib")
 
 typedef int socklen_t;
 #elif defined(__linux__)

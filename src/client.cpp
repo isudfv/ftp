@@ -17,6 +17,12 @@ void test() {
 
 
 int main(int args, char **argv) {
+#ifdef _WIN32
+    WSADATA wsaData;
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+        printf("Bind or Listen function failed with error %d\n", WSAGetLastError());
+    }
+#endif //windows
 
 //    string cmdline;
     cmdline.resize(MAXTEXT + 10);
@@ -58,8 +64,8 @@ int main(int args, char **argv) {
 
             auto startTime = chrono::high_resolution_clock::now();
 
-            in_port_t _port;
-            connfd.recv(&_port, sizeof(in_port_t)) ;
+            uint16_t _port;
+            connfd.recv(&_port, sizeof(_port)) ;
 //            cout << _port << endl;
             mysock datafd(inet_addr(argv[1]), _port);
             if (datafd.connect() < 0) {
