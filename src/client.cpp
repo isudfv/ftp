@@ -2,25 +2,31 @@
 #include <fstream>
 #include "mysock.h"
 #include <chrono>
+#include <thread>
 
 using namespace std;
 namespace fs = filesystem;
 
-char buf[MAXTEXT];
-char currdir[MAXTEXT];
-    std::string cmdline;
+char buf[MAXTEXT + 10];
+char currdir[MAXTEXT + 10];
+std::string cmdline;
+
+void test() {
+    cout << "TEST" << endl;
+}
+
 
 int main(int args, char **argv) {
 
 //    string cmdline;
-    cmdline.resize(MAXTEXT);
+    cmdline.resize(MAXTEXT + 10);
 
     if (args != 3) {
         cout << "Usage: ./client <ip> <port>\n";
         exit(1);
     }
 
-    mysock connfd(inet_addr(argv[1]), atoi(argv[2]));
+    mysock connfd(inet_addr(argv[1]), htons(atoi(argv[2])));
 
     if (connfd.connect() < 0) {
         cerr << "Problem in connecting to the server" << endl;
@@ -50,20 +56,34 @@ int main(int args, char **argv) {
         if (cmds[0] == "get") {
             fstream out(cmds[2], ios::out | ios::binary);
 
-            size_t chunk, rest;
-            connfd.recv(&chunk, sizeof(size_t));
-            connfd.recv(&rest, sizeof(size_t));
-            perror("Error: ");
-
             auto startTime = chrono::high_resolution_clock::now();
 
-            for (size_t i = 0; i < chunk; ++i) {
-                connfd.recv(buf, MAXTEXT);
-                out.write(buf, MAXTEXT);
-//                show_process_bar((double)(i+1)/(double)chunk);
+            in_port_t _port;
+            connfd.recv(&_port, sizeof(in_port_t)) ;
+//            cout << _port << endl;
+            mysock datafd(inet_addr(argv[1]), _port);
+            if (datafd.connect() < 0) {
+                cerr << "Problem in connecting to the server data trans socket" << endl;
+                exit(3);
             }
-            connfd.recv(buf, rest);
-            out.write(buf, rest);
+
+            cout << "Starting transferring files" << endl;
+            size_t fileSize, sendSize = 0;
+            datafd.recv(&fileSize, sizeof(size_t));
+
+            double ratio = 0;
+//            thread bar(test);
+            thread bar(show_process_bar, std::ref(ratio));
+
+            while ((n = datafd.recv(buf, MAXTEXT)) > 0) {
+//                cout << n << endl;
+                out.write(buf, n);
+                sendSize += n;
+                ratio = (double)sendSize / fileSize;
+            }
+
+            bar.join();
+
 
             auto endTime = chrono::high_resolution_clock::now();
             auto totalTime = chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count();
@@ -87,10 +107,11 @@ int main(int args, char **argv) {
             }*/
 
 
+//            perror("Error: ");
             cout << "File download done, Total time: "
                  << totalTime
                  << "ms, Average speed: "
-                 << chunk * MAXTEXT / 1024 / 1024 * 1000 / totalTime
+                 << fileSize / 1024 / 1024 * 1000 / totalTime
                  << " MiB/s" << endl;
         }
         cout << "ftp>" ;

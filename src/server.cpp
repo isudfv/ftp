@@ -1,5 +1,4 @@
 #include <iostream>
-#include <unistd.h>
 #include "mysock.h"
 #include <vector>
 #include <fstream>
@@ -15,8 +14,8 @@
 using namespace std;
 namespace fs = filesystem;
 
-char buf[MAXTEXT];
-char currdir[MAXTEXT];
+char buf[MAXTEXT + 10];
+char currdir[MAXTEXT + 10];
 
 int main(int args, char **argv) {
     if (args != 2) {
@@ -28,7 +27,7 @@ int main(int args, char **argv) {
         cerr << "Port number should be greater than 1024" << endl;
         exit(2);
     }
-    mysock listenfd(INADDR_ANY, atoi(argv[1]));
+    mysock listenfd(INADDR_ANY, htons(atoi(argv[1])));
     std::cout << "Server running...waiting for connections." << std::endl;
 
     listenfd.start();
@@ -59,7 +58,26 @@ int main(int args, char **argv) {
                 if (cmds[0] == "get") {
                     fstream in(cmds[1], ios::in | ios::binary);
 
-                    size_t chunk, rest;
+
+                    mysock _listenfd(htonl(INADDR_ANY), htons(4399));
+                    _listenfd.start();
+                    uint16_t _port = _listenfd.getPort();
+                    connfd.send(&_port, sizeof(in_port_t));
+                    mysock datafd(_listenfd.accept());
+
+                    in.seekg(0, ios::end);
+                    size_t fileSize = in.tellg();
+                    datafd.send(&fileSize, sizeof(size_t));
+                    in.seekg(0, ios::beg);
+
+                    while (in.read(buf, MAXTEXT)) {
+                        datafd.send(buf, MAXTEXT);
+                    }   datafd.send(buf, in.gcount());
+
+                    datafd.close();
+
+
+                    /*size_t chunk, rest;
                     in.seekg(0, ios::end);
                     chunk = in.tellg() / MAXTEXT;
                     rest  = in.tellg() % MAXTEXT;
@@ -67,16 +85,35 @@ int main(int args, char **argv) {
 
                     connfd.send(&chunk, sizeof(size_t));
                     connfd.send(&rest, sizeof(size_t));
-                    perror("Error: ");
 
+                    int n = 0;
                     for (size_t i = 0; i < chunk; ++i) {
-                        in.read(buf, MAXTEXT);
-                        connfd.send(buf, MAXTEXT);
+                        if (in.read(buf, MAXTEXT)){
+                            if ((n = connfd.send(buf, MAXTEXT)) < 0){
+                                if (n != 4096) {
+                                    cout << "n " << n << endl
+                                         << i << endl;
+                                }
+                                cout << "Error when sending" << endl;
+                            }
+                        }
+                        else
+                            cout << "Error when read" << endl;
+                        *//*in.read(buf, MAXTEXT);
+                        connfd.send(buf, MAXTEXT);*//*
                     }
-                    in.read(buf, rest);
-                    connfd.send(buf, rest);
+                    *//*in.read(buf, rest);
+                    connfd.send(buf, rest);*//*
+                    if (in.read(buf, rest)){
+                        if (connfd.send(buf, rest) < 0){
+                            cout << "Error when sending" << endl;
+                        }
+                    }
+                    else
+                        cout << "Error when read" << endl;*/
 
                     in.close();
+//                    perror("Error: ");
                     cout << "File upload done" << endl;
                 }
             }
